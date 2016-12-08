@@ -11,7 +11,7 @@
       msg: "Boto3 api testing"
 
   - name: "get EC2 instances"
-    boto3_api:
+    aws:
       service: ec2
       method: describe_instances
       params:
@@ -22,7 +22,7 @@
       msg: "{{ ec2_instances }}"
 
   - name: "get RDS instances"
-    boto3_api:
+    aws:
       service: rds
       method: describe_db_instances
     register: db_instances
@@ -31,7 +31,7 @@
       msg: "{{ db_instances }}"
 
   - name: "create security group"
-    boto3_api:
+    aws:
       service: ec2
       method: create_security_group
       params:

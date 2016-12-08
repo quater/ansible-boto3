@@ -25,13 +25,8 @@ Makes a call to the AWS API using the boto3 SDK.
   vars:
     state: present
 
-  tasks:
-  - name : Just debugging
-    debug:
-      msg: "Boto3 api testing"
-
   - name: "get EC2 instances"
-    boto3_api:
+    aws:
       service: ec2
       method: describe_instances
       params:
@@ -42,7 +37,7 @@ Makes a call to the AWS API using the boto3 SDK.
       msg: "{{ ec2_instances }}"
 
   - name: "get RDS instances"
-    boto3_api:
+    aws:
       service: rds
       method: describe_db_instances
     register: db_instances
@@ -51,7 +46,7 @@ Makes a call to the AWS API using the boto3 SDK.
       msg: "{{ db_instances }}"
 
   - name: "create security group"
-    boto3_api:
+    aws:
       service: ec2
       method: create_security_group
       params:
