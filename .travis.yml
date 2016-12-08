@@ -1,0 +1,13 @@
+language: python
+python:
+  - "2.7"
+  - "2.6"
+install:
+  # Build/test dependencies
+  - pip install -r requirements.txt
+script:
+- python -m compileall library/*.py
+- pep8 -r --ignore=E501,E221,W291,W391,E302,E251,E203,W293,E231,E303,E201,E225,E261,E241,E402 library
+- nosetests
+notifications:
+  slack: virtualcomputing:sE3KduFaTBjq0jGEwPdxs0Qr

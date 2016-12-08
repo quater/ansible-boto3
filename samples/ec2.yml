@@ -1,0 +1,45 @@
+---
+- hosts: localhost
+  connection: local
+  gather_facts: no
+  vars:
+    state: present
+
+  tasks:
+  - name : Just debugging
+    debug:
+      msg: "Boto3 api testing"
+
+  - name: "get EC2 instances"
+    boto3_api:
+      service: ec2
+      method: describe_instances
+      params:
+        DryRun: False
+    register: ec2_instances
+
+  - debug:
+      msg: "{{ ec2_instances }}"
+
+  - name: "get RDS instances"
+    boto3_api:
+      service: rds
+      method: describe_db_instances
+    register: db_instances
+
+  - debug:
+      msg: "{{ db_instances }}"
+
+  - name: "create security group"
+    boto3_api:
+      service: ec2
+      method: create_security_group
+      params:
+        DryRun: True
+        GroupName: Boto3ApiGroup
+        Description: boto3 security group created via aws module
+
+    register: ec2_sg
+
+  - debug:
+      msg: "{{ ec2_sg }}"
