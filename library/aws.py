@@ -14,11 +14,12 @@
 # You should have received a copy of the GNU General Public License
 # along with Ansible.  If not, see <http://www.gnu.org/licenses/>.
 
-import sys
+import json
 
 try:
     import boto3
     import boto
+    from botocore.response import StreamingBody
     from botocore.exceptions import ClientError, EndpointConnectionError, ParamValidationError, MissingParametersError
     HAS_BOTO3 = True
 except ImportError:
@@ -115,7 +116,31 @@ lambda_invocation_results:
     type: dict
 '''
 
+# ---------------------------------------------------------------------------------------------------
+#          Helper functions
+# ---------------------------------------------------------------------------------------------------
 
+
+def fix_return(node):
+    """
+    fixup returned dictionary
+
+    :param node:
+    :return:
+    """
+
+    if isinstance(node, datetime.datetime):
+        node_value = str(node)
+    elif isinstance(node, list):
+        node_value = [fix_return(item) for item in node]
+    elif isinstance(node, dict):
+        node_value = dict([(item, fix_return(node[item])) for item in node.keys()])
+    elif isinstance(node, StreamingBody):
+        node_value = node.read()
+    else:
+        node_value = node
+
+    return node_value
 
 
 # ---------------------------------------------------------------------------------------------------
@@ -172,11 +197,13 @@ def main():
         meta_data = response.pop('ResponseMetadata')
         if str(meta_data['HTTPStatusCode']).startswith('2'):
             response['changed'] = True
+            response['boto3'] = boto3.__version__
 
     except (ClientError, ParamValidationError, MissingParametersError) as e:
         module.fail_json(msg="Client error - {0}".format(e))
 
-    module.exit_json(**response)
+    # module.exit_json(**response)
+    module.exit_json(**camel_dict_to_snake_dict(fix_return(response)))
 
 
 # ansible import module(s) kept at ~eof as recommended

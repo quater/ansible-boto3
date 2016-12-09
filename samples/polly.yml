@@ -1,0 +1,22 @@
+---
+- hosts: localhost
+  connection: local
+  gather_facts: no
+
+
+  tasks:
+  - name: Synthesize Speech
+    aws:
+      service: polly
+      method: synthesize_speech
+      params:
+        OutputFormat: mp3
+        VoiceId: Joanna
+        TextType: ssml
+        Text: '<speak><prosody rate="medium" volume="medium" pitch="medium"><emphasis level="strong">Hi.</emphasis> I am your personal assistant. <break time="600ms"/>How can I be of assistance?</prosody></speak>'
+
+    register: speech_results
+
+  - debug:
+      msg: "{{ speech_results }}"
+
