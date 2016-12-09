@@ -17,8 +17,9 @@ Makes a call to the AWS API using the boto3 SDK.
 ##### Example Command
 `> ansible localhost -m aws -a "service=ec2 method=describe_instances"`
 
-##### Example Playbook
+##### Example Playbooks
 ```yaml
+# Describe EC2 & RDS instances and create a security group.
 - hosts: localhost
   connection: local
   gather_facts: no
@@ -58,6 +59,29 @@ Makes a call to the AWS API using the boto3 SDK.
 
   - debug:
       msg: "{{ ec2_sg }}"
+```
+```yaml
+# Synthesize speech with AWS Polly
+- hosts: localhost
+  connection: local
+  gather_facts: no
+
+  tasks:
+  - name: Synthesize Speech
+    aws:
+      service: polly
+      method: synthesize_speech
+      params:
+        OutputFormat: mp3
+        VoiceId: Joanna
+        TextType: ssml
+        Text: '<speak><prosody rate="medium" volume="medium" pitch="medium"><emphasis level="strong">Hi.</emphasis> I am your personal assistant. <break time="600ms"/>How can I be of assistance?</prosody></speak>'
+
+    register: speech_results
+
+  - debug:
+      msg: "{{ speech_results }}"
+
 ```
 ___
 
