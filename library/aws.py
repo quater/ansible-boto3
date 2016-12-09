@@ -30,44 +30,27 @@ DOCUMENTATION = '''
 module: boto3_api
 short_description: Invokes an AWS Lambda function
 description:
-    - This module has a single purpose of triggering the execution of a specified lambda function.
-      Use module M(lambda) to manage the lambda function itself, M(lambda_alias) to manage function aliases and
-      M(lambda_event) to manage event source mappings.
+    - This module provides a one-to-one mapping to all boto3 methods for each AWS service.  Refer to the Boto3 documentation for parameter syntax and definitions.
 
-version_added: "2.2"
+version_added: "2.3?"
 
 author: Pierre Jodouin (@pjodouin)
 options:
-  function_name:
+  service:
     description:
-      - The Lambda function name. You can specify an unqualified function name (for example, "Thumbnail") or you can
-        specify Amazon Resource Name (ARN) of the function. AWS Lambda also allows you to specify only the account ID
-        qualifier (for example, "account-id:Thumbnail"). Note that the length constraint applies only to the ARN.
-        If you specify only the function name, it is limited to 64 character in length.
+      - The AWS service name e.g. ec2, apigateway, cloudformation, lambda, s3,...etc.
     required: true
-  qualifier:
-    description:
-      - You can use this optional parameter to specify a Lambda function version or alias name. If you specify function
-        version, the API uses qualified function ARN to invoke a specific Lambda function. If you specify alias name,
-        the API uses the alias ARN to invoke the Lambda function version to which the alias points.
-        If you don't provide this parameter, then the API uses unqualified function ARN which results in invocation of
-        the $LATEST version.
-    required: false
     default: none
-  invocation_type:
+  method:
     description:
-      - By default, the Invoke API assumes "RequestResponse" invocation type. You can optionally request asynchronous
-        execution by specifying "Event" as the invocation type. You can also use this parameter to request AWS Lambda
-        to not execute the function but do some verification, such as if the caller is authorized to invoke the
-        function and if the inputs are valid. You request this by specifying "DryRun" as the invocation_type. This is
-        useful in a cross-account scenario when you want to verify access to a function without running it.
+      - The name of the client method for the specified service.
     required: true
-    choices: [
-        "RequestResponse",
-        "Event",
-        "DryRun"
-        ]
-    default: RequestResponse
+    default: none
+  params:
+    description:
+      - Valid parameters required or optional relating to the method being called. Refer to Boto3 documentation for parameter syntax and definitions.
+    required: false
+    default: {}
 requirements:
     - boto3
 extends_documentation_fragment:
@@ -151,7 +134,6 @@ def main():
     argument_spec = ec2_argument_spec()
     argument_spec.update(
         dict(
-            # state=dict(required=False, default='present', choices=['present', 'absent']),
             service=dict(required=True, default=None, aliases=['service_name']),
             method=dict(required=True, default=None, aliases=['method_name']),
             params=dict(type='dict', required=False, default={}, aliases=['method_params']),
@@ -181,8 +163,6 @@ def main():
         module.fail_json(msg="Can't authorize connection - {0}".format(e))
     except EndpointConnectionError as e:
         module.fail_json(msg="Connection Error - {0}".format(e))
-
-    # validate_params(module, aws)
 
     service_method = getattr(client, module.params['method'])
 
