@@ -160,7 +160,7 @@ def main():
     argument_spec.update(
         dict(
             service=dict(required=True, default=None, aliases=['service_name']),
-            method=dict(required=True, default=None, aliases=['method_name']),
+            method=dict(required=True, default=None, aliases=['method_name', 'action']),
             params=dict(type='dict', required=False, default={}, aliases=['method_params']),
         )
     )
@@ -195,9 +195,9 @@ def main():
         response = service_method(**module.params['params'])
 
         meta_data = response.pop('ResponseMetadata')
+        response['boto3'] = boto3.__version__
         if str(meta_data['HTTPStatusCode']).startswith('2'):
             response['changed'] = True
-            response['boto3'] = boto3.__version__
 
     except (ClientError, ParamValidationError, MissingParametersError) as e:
         module.fail_json(msg="Client error - {0}".format(e))
