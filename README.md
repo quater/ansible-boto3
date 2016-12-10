@@ -1,7 +1,8 @@
 # Ansible Cloud Module for AWS
-#### Version 0.1 [![Build Status](https://travis-ci.org/pjodouin/ansible-boto3.svg)](https://travis-ci.org/pjodouin/ansible-boto3)
+#### Version 0.2 [![Build Status](https://travis-ci.org/pjodouin/ansible-boto3.svg)](https://travis-ci.org/pjodouin/ansible-boto3)
 
-This module helps manage AWS resources using the boto3 SDK.
+This module helps manage AWS resources using the boto3 SDK.  It is not idempotent and does not support `check` mode but it does allow
+one to include new AWS services in your playbooks until *CloudFormation* support is provided or a custom Ansible module is written.
 
 
 ## Requirements
