@@ -1,8 +1,8 @@
-# Ansible Cloud Module for AWS
+# Ansible Cloud Module for AWS API - Boto3 SDK
 #### Version 0.2 [![Build Status](https://travis-ci.org/pjodouin/ansible-boto3.svg)](https://travis-ci.org/pjodouin/ansible-boto3)
 
 This module helps manage AWS resources using the boto3 SDK.  It is not idempotent and does not support `check` mode but it does allow
-one to include new AWS services in your playbooks until *CloudFormation* support is provided or a custom Ansible module is written.
+one to include new AWS services in playbooks until *CloudFormation* support is provided or a custom Ansible module is written.
 
 
 ## Requirements
@@ -88,7 +88,7 @@ ___
 
 ## Installation
 
-Do the following to install the lambda modules in your Ansible environment:
+Do the following to install the aws module in your Ansible environment:
 
 1. Clone this repository or download the ZIP file.
 

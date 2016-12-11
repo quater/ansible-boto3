@@ -1,0 +1,60 @@
+---
+- hosts: localhost
+  connection: local
+  gather_facts: no
+  vars:
+    alb:
+      load_balancer_name: v2test
+      subnets:
+      - sn
+      scheme: internet-facing
+      security_groups:
+      - sg
+      tags:
+      - Key: Environment
+        Value: Demo19
+      listeners:
+      - protocol: http
+        port: 80
+        ssl_policy:
+        certificates:
+        default_actions:
+        target_groups:
+        - name:
+          protocol:
+          port:
+          vpc_id:
+          health_check_protocol:
+          health_check_port:
+          health_check_path:
+          health_check_interval_seconds:
+          health_check_timeout_seconds:
+          healthy_threshold_count:
+          unhealthy_threshold_count:
+          matcher:
+            http_code:
+          rule:
+            conditions: []
+            priority:
+
+
+  tasks:
+  - name: "Create Application Load Balancers"
+    aws:
+      service: elbv2
+      method: create_load_balancer
+      params:
+        LoadBalancerName: "{{ alb.load_balancer_name }}"
+        Subnets: "{{ alb.subnets  }}"
+        Scheme: "{{ alb.scheme | default('internet-facing') }}"
+        SecurityGroup: "{{ alb.security_groups | default(omit) }}"
+        Tags: "{{ alb.tags | default(omit) }}"
+
+    register: alb_info
+
+  - name: "Create Listener"
+    include: listener.yml
+
+    with_items: "{{ alb.listeners }}"
+    loop_control:
+      loop_var: listener

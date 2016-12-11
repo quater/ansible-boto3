@@ -1,0 +1,35 @@
+- name: "Create Target Group"
+  aws:
+    service: elbv2
+    method: create_target_group
+    params:
+      Name: "{{ target_group.name }}"
+      Protocol: "{{ target_group.name }}"
+      Port: "{{ target_group.name }}"
+      VpcId: "{{ target_group.name }}"
+      HealthCheckProtocol: "{{ target_group.name }}"
+      HealthCheckPort: "{{ target_group.name }}"
+      HealthCheckPath: "{{ target_group.name }}"
+      HealthCheckIntervalSeconds: "{{ target_group.name }}"
+      HealthCheckTimeoutSeconds: "{{ target_group.name }}"
+      HealthyThresholdCount: "{{ target_group.name }}"
+      UnhealthyThresholdCount: "{{ target_group.name }}"
+      Matcher:
+        HttpCode: "{{ target_group.name }}"
+
+  register: target_group_info
+
+- name: "Create Listener Rule"
+  aws:
+    service: elbv2
+    method: create_rule
+    params:
+      ListenerArn: "{{listener_info.arn}}"
+      Conditions: "{{ target_group.name }}"
+      Priority: "{{ target_group.name }}"
+      Actions:
+      - Type: forward
+        TargetGroupArn: "{{ target_group_info.arn }}"
+
+  register: rule_info
+
