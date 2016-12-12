@@ -143,6 +143,28 @@ def fix_return(node):
     return node_value
 
 
+def fix_input(node):
+    """
+    fixup params dictionary
+
+    :param node:
+    :return:
+    """
+
+    if isinstance(node, list):
+        node_value = [fix_input(item) for item in node]
+    elif isinstance(node, dict):
+        node_value = dict([(item, fix_input(node[item])) for item in node.keys()])
+    elif node.isdigit():
+        node_value = int(node)
+    elif node.startswith('_') and node[1:].isdigit():
+        node_value = str(node[1:])
+    else:
+        node_value = node
+
+    return node_value
+
+
 # ---------------------------------------------------------------------------------------------------
 #
 #   MAIN
@@ -190,9 +212,11 @@ def main():
         module.fail_json(msg="Connection Error - {0}".format(e))
 
     service_method = getattr(client, module.params['method'])
+    params = fix_input(module.params['params'])
+    # module.exit_json(**params)
 
     try:
-        response = service_method(**module.params['params'])
+        response = service_method(**params)
 
         meta_data = response.pop('ResponseMetadata')
         response['boto3'] = boto3.__version__
