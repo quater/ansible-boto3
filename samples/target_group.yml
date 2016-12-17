@@ -4,32 +4,33 @@
     method: create_target_group
     params:
       Name: "{{ target_group.name }}"
-      Protocol: "{{ target_group.name }}"
-      Port: "{{ target_group.name }}"
-      VpcId: "{{ target_group.name }}"
-      HealthCheckProtocol: "{{ target_group.name }}"
-      HealthCheckPort: "{{ target_group.name }}"
-      HealthCheckPath: "{{ target_group.name }}"
-      HealthCheckIntervalSeconds: "{{ target_group.name }}"
-      HealthCheckTimeoutSeconds: "{{ target_group.name }}"
-      HealthyThresholdCount: "{{ target_group.name }}"
-      UnhealthyThresholdCount: "{{ target_group.name }}"
+      Protocol: "{{ target_group.protocol }}"
+      Port: "{{ target_group.port }}"
+      VpcId: "{{ target_group.vpc_id }}"
+      HealthCheckProtocol: "{{ target_group.health_check_protocol | default(omit) }}"
+      HealthCheckPort: "{{ target_group.health_check_port | default(omit) }}"
+      HealthCheckPath: "{{ target_group.health_check_path | default(omit) }}"
+      HealthCheckIntervalSeconds: "{{ target_group.health_check_interval_seconds | default(omit) }}"
+      HealthCheckTimeoutSeconds: "{{ target_group.health_check_timeout_seconds | default(omit) }}"
+      HealthyThresholdCount: "{{ target_group.healthy_threshold_count | default(omit) }}"
+      UnhealthyThresholdCount: "{{ target_group.unhealthy_threshold_count | default(omit) }}"
       Matcher:
-        HttpCode: "{{ target_group.name }}"
+        HttpCode: "_{{ target_group.http_code | default(200) }}"
 
   register: target_group_info
 
-- name: "Create Listener Rule"
-  aws:
-    service: elbv2
-    method: create_rule
-    params:
-      ListenerArn: "{{listener_info.arn}}"
-      Conditions: "{{ target_group.name }}"
-      Priority: "{{ target_group.name }}"
-      Actions:
-      - Type: forward
-        TargetGroupArn: "{{ target_group_info.arn }}"
-
-  register: rule_info
+#- name: "Create Listener Rule"
+#  aws:
+#    service: elbv2
+#    method: create_rule
+#    params:
+#      ListenerArn: "{{listener_info.arn}}"
+#      Conditions: "{{ target_group.name }}"
+#      Priority: "{{ target_group.name }}"
+#      Actions:
+#      - Type: forward
+#        TargetGroupArn: "{{ target_group_info.arn }}"
+#
+#  register: rule_info
+#
 

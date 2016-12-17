@@ -1,21 +1,24 @@
-- name: "Create Listener"
-  aws:
-    service: elbv2
-    method: create_listnener
-    params:
-      LoadBalancerArn: "{{ alb_info.elb_name }}"
-      Protocol: "{{ listener.protocol }}"
-      Port: "{{ listener.port }}"
-      SslPolicy: "{{ listener.ssl_policy }}"
-      Certificates:  "{{ listener.certificates }}"
-      DefaultActions:  "{{ listener.default_actions }}"
-
-  register: listerner_info
-
 - name: "Create Target Groups"
   include: target_group.yml
   with_items: "{{ listener.target_groups }}"
   loop_control:
     loop_var: target_group
+
+- name: "Create Listener"
+  aws:
+    service: elbv2
+    method: create_listener
+    params:
+      LoadBalancerArn: "{{ alb_info.load_balancers[0].load_balancer_arn }}"
+      Protocol: "{{ listener.protocol }}"
+      Port: "{{ listener.port }}"
+      SslPolicy: "{{ listener.ssl_policy | default(omit) }}"
+      Certificates:  "{{ listener.certificates | default(omit) }}"
+      DefaultActions:
+        Type: forward
+        TargetGroupArn: "{{ listener.default_actions | default(omit) }}"
+
+  register: listerner_info
+#
 
 
