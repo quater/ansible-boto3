@@ -14,11 +14,12 @@
 # You should have received a copy of the GNU General Public License
 # along with Ansible.  If not, see <http://www.gnu.org/licenses/>.
 
-import json
+import datetime
+from ansible.module_utils.basic import AnsibleModule
+from ansible.module_utils.ec2 import get_aws_connection_info, boto3_conn, camel_dict_to_snake_dict, ec2_argument_spec
 
 try:
     import boto3
-    import boto
     from botocore.response import StreamingBody
     from botocore.exceptions import ClientError, EndpointConnectionError, ParamValidationError, MissingParametersError
     HAS_BOTO3 = True
@@ -33,7 +34,7 @@ short_description: Invokes an AWS Lambda function
 description:
     - This module provides a one-to-one mapping to all boto3 methods for each AWS service.  Refer to the Boto3 documentation for parameter syntax and definitions.
 
-version_added: "2.3?"
+version_added: "2.4?"
 
 author: Pierre Jodouin (@pjodouin)
 options:
@@ -52,6 +53,14 @@ options:
       - Valid parameters required or optional relating to the method being called. Refer to Boto3 documentation for parameter syntax and definitions.
     required: false
     default: {}
+  convert_param_case:
+    description:
+      - When present, this parameter specifies whether to convert the parameter case to that required by the API.
+        Some AWS APIs use camelCase, others PascaleCase.  If absent, no case conversion is performed on the parameters.
+    required: false
+    default: none
+    choices: ["camel", "Pascale"]
+
 requirements:
     - boto3
 extends_documentation_fragment:
@@ -96,10 +105,11 @@ EXAMPLES = '''
     boto3_api:
       service: ec2
       method: create_security_group
+      convert_param_case: Pascale
       params:
-        DryRun: True
-        GroupName: Boto3ApiGroup
-        Description: boto3 security group created via aws module
+        dry_run: True
+        group_name: Boto3ApiGroup
+        description: boto3 security group created via aws module
 
     register: ec2_sg
 
@@ -110,7 +120,7 @@ EXAMPLES = '''
 
 RETURN = '''
 ---
-lambda_invocation_results:
+method_invocation_results:
     description: dictionary of items returned depending of the method called
     returned: success
     type: dict
@@ -121,9 +131,40 @@ lambda_invocation_results:
 # ---------------------------------------------------------------------------------------------------
 
 
+def pc(key):
+    """
+    Changes snake_case key into Pascale case equivalent. For example, 'this_function_name' becomes 'ThisFunctionName'.
+
+    :param key:
+    :return:
+    """
+    return "".join([token.capitalize() for token in key.split('_')])
+
+
+def cc(key):
+    """
+    Changes snake_case key into camel case equivalent. For example, 'this_function_name' becomes 'thisFunctionName'.
+    :param key:
+    :return:
+    """
+    token = pc(key)
+
+    return "{}{}".format(token[0].lower(), token[1:])
+
+
+def as_is(key):
+    """
+    Return case as is.
+
+    :param key:
+    :return:
+    """
+    return key
+
+
 def fix_return(node):
     """
-    fixup returned dictionary
+    fix up returned dictionary, converting objects to values.
 
     :param node:
     :return:
@@ -143,18 +184,19 @@ def fix_return(node):
     return node_value
 
 
-def fix_input(node):
+def fix_input(node, key_case=as_is):
     """
-    fixup params dictionary
+    fixup params dictionary with proper parameter case (and to allow for numeric values)
 
     :param node:
+    :param key_case:
     :return:
     """
 
     if isinstance(node, list):
-        node_value = [fix_input(item) for item in node]
+        node_value = [fix_input(item, key_case) for item in node]
     elif isinstance(node, dict):
-        node_value = dict([(item, fix_input(node[item])) for item in node.keys()])
+        node_value = dict([(key_case(item), fix_input(node[item], key_case)) for item in node.keys()])
     elif node.isdigit():
         node_value = int(node)
     elif node.startswith('_') and node[1:].isdigit():
@@ -184,6 +226,7 @@ def main():
             service=dict(required=True, default=None, aliases=['service_name']),
             method=dict(required=True, default=None, aliases=['method_name', 'action']),
             params=dict(type='dict', required=False, default={}, aliases=['method_params']),
+            convert_param_case=dict(required=False, default=None, choices=['camel', 'Pascale'])
         )
     )
 
@@ -212,8 +255,15 @@ def main():
         module.fail_json(msg="Connection Error - {0}".format(e))
 
     service_method = getattr(client, module.params['method'])
-    params = fix_input(module.params['params'])
-    # module.exit_json(**params)
+
+    if module.params['convert_param_case'] == 'camel':
+        key_case = cc
+    elif module.params['convert_param_case'] == 'Pascale':
+        key_case = pc
+    else:
+        key_case = as_is
+
+    params = fix_input(module.params['params'], key_case)
 
     try:
         response = service_method(**params)
@@ -226,13 +276,7 @@ def main():
     except (ClientError, ParamValidationError, MissingParametersError) as e:
         module.fail_json(msg="Client error - {0}".format(e))
 
-    # module.exit_json(**response)
     module.exit_json(**camel_dict_to_snake_dict(fix_return(response)))
-
-
-# ansible import module(s) kept at ~eof as recommended
-from ansible.module_utils.basic import *
-from ansible.module_utils.ec2 import *
 
 if __name__ == '__main__':
     main()
