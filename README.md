@@ -84,6 +84,34 @@ Makes a call to the AWS API using the boto3 SDK.
       msg: "{{ speech_results }}"
 
 ```
+
+```yaml
+
+#  Example showing how to create Application Load Balancer Target Groups by iterating through a list.  Note support for the use of the 'omit' keyword.
+
+- name: "Create ALB Target Groups"
+  aws:
+    service: elbv2
+    method: create_target_group
+    region: "{{ region }}"
+    params:
+      Name: "{{ item.target_group.name }}"
+      Protocol: "{{ item.target_group.protocol | upper }}"
+      Port: "{{ item.target_group.port }}"
+      VpcId: "{{ vpc_id }}"
+      HealthCheckProtocol: "{{ item.target_group.health_check_protocol | default(omit) }}"
+      HealthCheckPort: "{{ item.target_group.health_check_port | default(omit) }}"
+      HealthCheckPath: "{{ item.target_group.health_check_path | default(omit) }}"
+      HealthCheckIntervalSeconds: "{{ item.target_group.health_check_interval_seconds | default(30) }}"
+      HealthCheckTimeoutSeconds: "{{ item.target_group.health_check_timeout_seconds | default(5) }}"
+      HealthyThresholdCount: "{{ item.target_group.healthy_threshold_count | default(2) }}"
+      UnhealthyThresholdCount: "{{ item.target_group.unhealthy_threshold_count | default(omit) }}"
+      Matcher: "{{ item.target_group.matcher | default(omit) }}"
+  register: tg_info
+  with_items: "{{ listener_item.rules }}"
+
+```
+
 ___
 
 ## Installation

@@ -196,7 +196,11 @@ def fix_input(node, key_case=as_is):
     if isinstance(node, list):
         node_value = [fix_input(item, key_case) for item in node]
     elif isinstance(node, dict):
-        node_value = dict([(key_case(item), fix_input(node[item], key_case)) for item in node.keys()])
+        node_value = dict(
+            [(key_case(item), fix_input(node[item], key_case))
+                for item in node.keys() if not (isinstance(node[item], basestring) and node[item].startswith('__omit_'))
+             ]
+        )
     elif node.isdigit():
         node_value = int(node)
     elif node.startswith('_') and node[1:].isdigit():
