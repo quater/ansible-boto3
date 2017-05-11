@@ -1,0 +1,6 @@
+# inner.yml
+- debug: msg="outer item={{ outer_item }} inner item={{ item }}"
+  with_items:
+    - eat
+    - digest
+    - regurgitate

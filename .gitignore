@@ -89,7 +89,7 @@ ENV/
 .ropeproject
 
 # PyCharm stuff:
-.idea/
+#.idea/
 
 # Mac OS/X stuff:
 .DS_store

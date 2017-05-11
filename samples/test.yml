@@ -1,0 +1,19 @@
+---
+- hosts: localhost
+  connection: local
+  gather_facts: no
+  vars:
+    alb:
+      load_balancer_name: yup
+  tasks:
+
+  - include: sub_test.yml
+    with_items:
+    - apple
+    - orange
+    - banana
+    loop_control:
+      loop_var: outer_item
+
+    when: alb.load_balancer_name == 'yup'
+
