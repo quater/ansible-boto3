@@ -55,11 +55,25 @@ Makes a call to the AWS API using the boto3 SDK.
         DryRun: True
         GroupName: Boto3ApiGroup
         Description: boto3 security group created via aws module
-
     register: ec2_sg
 
   - debug:
       msg: "{{ ec2_sg }}"
+
+  - name: "Move AWS account"
+    aws:
+      service: organizations
+      method: move_account
+      params:
+        AccountId: 123456789101
+        SourceParentId: 123456789102
+        DestinationParentId: 123456789103
+      convert_to_integer: no
+    register: aws_org
+
+  - debug:
+      msg: "{{ aws_org }}"
+      
 ```
 ```yaml
 # Synthesize speech with AWS Polly

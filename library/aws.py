@@ -60,6 +60,12 @@ options:
     required: false
     default: none
     choices: ["camel", "Pascale"]
+  convert_to_integer:
+    description:
+      - Controls whether strings that consist of digits only should be converted to integer.
+    required: false
+    default: yes
+    choices: ["yes", "no"]
 
 requirements:
     - boto3
@@ -115,6 +121,20 @@ EXAMPLES = '''
 
   - debug:
       msg: "{{ ec2_sg }}"
+
+  - name: "Move AWS account"
+    aws:
+      service: organizations
+      method: move_account
+      params:
+        AccountId: 123456789101
+        SourceParentId: 123456789102
+        DestinationParentId: 123456789103
+      convert_to_integer: no
+    register: aws_org
+
+  - debug:
+      msg: "{{ aws_org }}"
 
 '''
 
@@ -184,25 +204,29 @@ def fix_return(node):
     return node_value
 
 
-def fix_input(node, key_case=as_is):
+def fix_input(node, key_int, key_case=as_is):
     """
     fixup params dictionary with proper parameter case (and to allow for numeric values)
 
     :param node:
+    :param key_int:
     :param key_case:
     :return:
     """
 
     if isinstance(node, list):
-        node_value = [fix_input(item, key_case) for item in node]
+        node_value = [fix_input(item, key_int, key_case) for item in node]
     elif isinstance(node, dict):
         node_value = dict(
-            [(key_case(item), fix_input(node[item], key_case))
+            [(key_case(item), fix_input(node[item], key_int, key_case))
                 for item in node.keys() if not (isinstance(node[item], basestring) and node[item].startswith('__omit_'))
              ]
         )
     elif node.isdigit():
-        node_value = int(node)
+        if key_int == "yes":
+            node_value = int(node)
+        elif key_int == "no":
+            node_value = node
     elif node.startswith('_') and node[1:].isdigit():
         node_value = str(node[1:])
     else:
@@ -230,7 +254,8 @@ def main():
             service=dict(required=True, default=None, aliases=['service_name']),
             method=dict(required=True, default=None, aliases=['method_name', 'action']),
             params=dict(type='dict', required=False, default={}, aliases=['method_params']),
-            convert_param_case=dict(required=False, default=None, choices=['camel', 'Pascale'])
+            convert_param_case=dict(required=False, default=None, choices=['camel', 'Pascale']),
+            convert_to_integer=dict(required=False, default=True, choices=["yes", "no"])
         )
     )
 
@@ -267,7 +292,7 @@ def main():
     else:
         key_case = as_is
 
-    params = fix_input(module.params['params'], key_case)
+    params = fix_input(module.params['params'], module.params['convert_to_integer'], key_case)
 
     try:
         response = service_method(**params)
