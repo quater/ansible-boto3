@@ -16,7 +16,9 @@
 
 import datetime
 from ansible.module_utils.basic import AnsibleModule
-from ansible.module_utils.ec2 import get_aws_connection_info, boto3_conn, camel_dict_to_snake_dict, ec2_argument_spec
+from ansible.module_utils.ec2 import (get_aws_connection_info, boto3_conn, ec2_argument_spec,
+                                      camel_dict_to_snake_dict, ansible_dict_to_boto3_filter_list,
+                                      ansible_dict_to_boto3_tag_list, boto3_tag_list_to_ansible_dict)
 
 try:
     import boto3
@@ -30,11 +32,9 @@ except ImportError:
 DOCUMENTATION = '''
 ---
 module: boto3_api
-short_description: Invokes an AWS Lambda function
+short_description: Invokes an AWS API using Boto3
 description:
     - This module provides a one-to-one mapping to all boto3 methods for each AWS service.  Refer to the Boto3 documentation for parameter syntax and definitions.
-
-version_added: "2.4?"
 
 author: Pierre Jodouin (@pjodouin)
 options:
@@ -56,16 +56,34 @@ options:
   convert_param_case:
     description:
       - When present, this parameter specifies whether to convert the parameter case to that required by the API.
-        Some AWS APIs use camelCase, others PascaleCase.  If absent, no case conversion is performed on the parameters.
+        Some AWS APIs use camelCase, others PascalCase.  If absent, no case conversion is performed on the parameters.
     required: false
     default: none
-    choices: ["camel", "Pascale"]
+    choices: ["camel", "Pascal"]
   convert_to_integer:
     description:
       - Controls whether strings that consist of digits only should be converted to integer.
     required: false
     default: yes
     choices: ["yes", "no"]
+  tags:
+    description:
+      - The tags attached to the resource.
+      - This is a convenience parameter that converts the dict to Boto3 key-value pairs and adds them to the method call params.
+    required: false
+    returned: when returned by API
+    type: dict
+    sample: "{
+        'Tag': 'Example'
+    }"
+  filters:
+    description:
+      - A dict of filters to apply. Each dict item consists of a filter key and a filter value.
+      - This is a convenience parameter that converts the dict to Boto3 key-value pairs and adds them to the method call params.
+      - See API documentation for possible filters. Filter names and values are case sensitive.
+    required: false
+    returned: false
+    type: dict
 
 requirements:
     - boto3
@@ -111,7 +129,7 @@ EXAMPLES = '''
     boto3_api:
       service: ec2
       method: create_security_group
-      convert_param_case: Pascale
+      convert_param_case: Pascal
       params:
         dry_run: True
         group_name: Boto3ApiGroup
@@ -153,7 +171,7 @@ method_invocation_results:
 
 def pc(key):
     """
-    Changes snake_case key into Pascale case equivalent. For example, 'this_function_name' becomes 'ThisFunctionName'.
+    Changes snake_case key into Pascal case equivalent. For example, 'this_function_name' becomes 'ThisFunctionName'.
 
     :param key:
     :return:
@@ -182,7 +200,7 @@ def as_is(key):
     return key
 
 
-def fix_return(node):
+def fix_return(node, convert_tags=False):
     """
     fix up returned dictionary, converting objects to values.
 
@@ -196,6 +214,10 @@ def fix_return(node):
         node_value = [fix_return(item) for item in node]
     elif isinstance(node, dict):
         node_value = dict([(item, fix_return(node[item])) for item in node.keys()])
+        if convert_tags:
+            for tag_key in ('tags', 'Tags'):
+                if tag_key in node_value:
+                    node_value[tag_key] = boto3_tag_list_to_ansible_dict(node_value.pop(tag_key))
     elif isinstance(node, StreamingBody):
         node_value = node.read()
     else:
@@ -214,6 +236,7 @@ def fix_input(node, key_int, key_case=as_is):
     :return:
     """
 
+    node_value = node
     if isinstance(node, list):
         node_value = [fix_input(item, key_int, key_case) for item in node]
     elif isinstance(node, dict):
@@ -222,15 +245,14 @@ def fix_input(node, key_int, key_case=as_is):
                 for item in node.keys() if not (isinstance(node[item], basestring) and node[item].startswith('__omit_'))
              ]
         )
-    elif node.isdigit():
-        if key_int == "yes":
-            node_value = int(node)
-        elif key_int == "no":
-            node_value = node
-    elif node.startswith('_') and node[1:].isdigit():
-        node_value = str(node[1:])
-    else:
-        node_value = node
+    elif isinstance(node, basestring):
+        if node.isdigit():
+            if key_int == "yes":
+                node_value = int(node)
+            elif key_int == "no":
+                node_value = node
+        elif node.startswith('_') and node[1:].isdigit():
+            node_value = str(node[1:])
 
     return node_value
 
@@ -254,8 +276,10 @@ def main():
             service=dict(required=True, default=None, aliases=['service_name']),
             method=dict(required=True, default=None, aliases=['method_name', 'action']),
             params=dict(type='dict', required=False, default={}, aliases=['method_params']),
-            convert_param_case=dict(required=False, default=None, choices=['camel', 'Pascale']),
-            convert_to_integer=dict(required=False, default=True, choices=["yes", "no"])
+            convert_param_case=dict(required=False, default=None, choices=['camel', 'Pascal']),
+            convert_to_integer=dict(required=False, default=True, choices=["yes", "no"]),
+            filters=dict(default={}, type='dict'),
+            tags=dict(default={}, type='dict'),
         )
     )
 
@@ -287,12 +311,22 @@ def main():
 
     if module.params['convert_param_case'] == 'camel':
         key_case = cc
-    elif module.params['convert_param_case'] == 'Pascale':
+    elif module.params['convert_param_case'] == 'Pascal':
         key_case = pc
     else:
         key_case = as_is
 
     params = fix_input(module.params['params'], module.params['convert_to_integer'], key_case)
+    if not isinstance(params, dict):
+        params = dict()
+
+    if module.params['tags']:
+        tags_key = key_case('tags')
+        params[tags_key] = ansible_dict_to_boto3_tag_list(module.params['tags'])
+
+    if module.params['filters']:
+        filters_key = key_case('filters')
+        params[filters_key] = ansible_dict_to_boto3_filter_list(module.params['filters'])
 
     try:
         response = service_method(**params)
@@ -305,7 +339,7 @@ def main():
     except (ClientError, ParamValidationError, MissingParametersError) as e:
         module.fail_json(msg="Client error - {0}".format(e))
 
-    module.exit_json(**camel_dict_to_snake_dict(fix_return(response)))
+    module.exit_json(**camel_dict_to_snake_dict(fix_return(response, convert_tags=True)))
 
 if __name__ == '__main__':
     main()
