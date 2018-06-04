@@ -1,4 +1,5 @@
-#!/usr/bin/python
+#!/usr/bin/env python
+#
 # (c) 2016, Pierre Jodouin <pjodouin(at)virtualcomputing.solutions
 #
 # Ansible is free software: you can redistribute it and/or modify
@@ -19,6 +20,7 @@ from ansible.module_utils.basic import AnsibleModule
 from ansible.module_utils.ec2 import (get_aws_connection_info, boto3_conn, ec2_argument_spec,
                                       camel_dict_to_snake_dict, ansible_dict_to_boto3_filter_list,
                                       ansible_dict_to_boto3_tag_list, boto3_tag_list_to_ansible_dict)
+from six import string_types
 
 try:
     import boto3
@@ -242,10 +244,10 @@ def fix_input(node, key_int, key_case=as_is):
     elif isinstance(node, dict):
         node_value = dict(
             [(key_case(item), fix_input(node[item], key_int, key_case))
-                for item in node.keys() if not (isinstance(node[item], basestring) and node[item].startswith('__omit_'))
+                for item in node.keys() if not (isinstance(node[item], string_types) and node[item].startswith('__omit_'))
              ]
         )
-    elif isinstance(node, basestring):
+    elif isinstance(node, string_types):
         if node.isdigit():
             if key_int == "yes":
                 node_value = int(node)
