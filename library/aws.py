@@ -14,6 +14,7 @@
 # You should have received a copy of the GNU General Public License
 # along with Ansible.  If not, see <http://www.gnu.org/licenses/>.
 
+from six import string_types
 import datetime
 from ansible.module_utils.basic import AnsibleModule
 from ansible.module_utils.ec2 import (get_aws_connection_info, boto3_conn, ec2_argument_spec,
@@ -242,10 +243,10 @@ def fix_input(node, key_int, key_case=as_is):
     elif isinstance(node, dict):
         node_value = dict(
             [(key_case(item), fix_input(node[item], key_int, key_case))
-                for item in node.keys() if not (isinstance(node[item], basestring) and node[item].startswith('__omit_'))
+                for item in node.keys() if not (isinstance(node[item], string_types) and node[item].startswith('__omit_'))
              ]
         )
-    elif isinstance(node, basestring):
+    elif isinstance(node, string_types):
         if node.isdigit():
             if key_int == "yes":
                 node_value = int(node)
